@@ -1,0 +1,60 @@
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: cash-cow
+    environment:
+      POSTGRES_DB: cattle_marketplace
+      POSTGRES_USER: cash-cow-user
+      POSTGRES_PASSWORD: cash-cow-password!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cattle-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cash-cow-user -d cattle_marketplace"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  migrate:
+    image: migrate/migrate
+    container_name: cattle-migrate
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - cattle-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - migrate
+
+  api:
+    build: .
+    container_name: cattle-api
+    environment:
+      DB_HOST: cash-cow
+      DB_USER: cash-cow-user
+      DB_PASSWORD: cash-cow-password!
+      DB_NAME: cattle_marketplace
+      DB_PORT: 5432
+      DB_DSN: postgres://cash-cow-user:cash-cow-password!@cash-cow:5432/cattle_marketplace?sslmode=disable
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cattle-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  cattle-network:
+    driver: bridge
