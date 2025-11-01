@@ -30,6 +30,7 @@ type User struct {
 	ID          int64     `json:"id"`
 	FarmerID    string    `json:"farmer_id"`
 	Email       string    `json:"email"`
+	PhoneNumber string    `json:"phone_number"`
 	FirstName   string    `json:"first_name"`
 	LastName    string    `json:"last_name"`
 	MiddleName  string    `json:"middle_name"`
@@ -107,6 +108,7 @@ func ValidateUser(v *validator.Validator, user *User) {
 	v.Check(len(user.LastName) <= 50, "last_name", "must not be more than 50 characters long")
 	v.Check(len(user.MiddleName) <= 50, "middle_name", "must not be more than 50 characters long")
 	v.Check(len(user.FarmerID) <= 50, "farmer_id", "must not be more than 50 characters long")
+	v.Check(len(user.PhoneNumber) <= 15, "phone_number", "must not be more than 15 characters long")
 	validateEmail(v, user.Email)
 	if user.Password.plaintext != nil {
 		ValidatePasswordPlaintext(v, *user.Password.plaintext)
@@ -122,6 +124,7 @@ func ValidateUser(v *validator.Validator, user *User) {
 type UserFilters struct {
 	FarmerID    string
 	Email       string
+	PhoneNumber string
 	Name        string
 	IsActivated *bool // nil = don't filter, otherwise filter by value
 	IsDeleted   *bool // nil = don't filter, otherwise filter by value
