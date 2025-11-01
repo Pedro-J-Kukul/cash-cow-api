@@ -1,0 +1,18 @@
+# Ignore the binary files
+*.bin
+*.exe
+*.dll
+*.so
+*.dylib
+# Ignore log files
+*.log
+# Ignore temporary files
+*.tmp
+*.swp
+# Ignore build directories
+build/
+dist/
+# Ignore node modules
+node_modules/
+
+.env 
