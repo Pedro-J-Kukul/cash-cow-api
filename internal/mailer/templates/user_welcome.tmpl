@@ -1,0 +1,75 @@
+// Filename: internal/mailer/templates/user_welcome.templates
+// Description: email server template to send to new users
+
+{{ define "subject" }} Welcome to the Police Training System {{ end }}
+
+{{ define "plainBody" }}
+
+Hi,
+
+You have been registered as a user on the Police Training System.
+
+Your login credentials are:
+Email: {{.userEmail}}
+Password: {{.userPassword}}
+
+IMPORTANT: Please change your password after your first login for security purposes.
+
+For your reference, your user ID number is {{.userID}}.
+
+Please send a request to the PUT /v1/users/activated endpoint with the following JSON body to activate your account:
+{"token": "{{.activationToken}}"}
+
+Please note that this is a one-time use token and it will expire in 3 days.
+
+If you have any questions or need assistance, please contact your system administrator.
+
+Best regards,
+Police Training System Administration
+{{ end }}
+
+{{ define "htmlBody" }}
+
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+
+<body>
+    <div class="container">
+        <h2>Welcome to the Police Training System</h2>
+        
+        <p>Hi, {{.firstName}} {{.lastName}}</p>
+        
+        <p>You have been registered as a user on the Police Training System.</p>
+        
+        <div class="credentials">
+            <h3>Your Login Credentials</h3>
+            <p><strong>Email:</strong> {{.email}}</p>
+            <p><strong>Password:</strong> {{.password}}</p>
+        </div>
+        
+        <div class="warning">
+            <p><strong>⚠️ IMPORTANT:</strong> Please change your password after your first login for security purposes.</p>
+        </div>
+        
+        <p>For your reference, your user ID number is <strong>{{.userID}}</strong>.</p>
+        
+        <h3>Account Activation</h3>
+        <p>Please send a request to the <code>PUT /v1/users/activated</code> endpoint with the following JSON body to activate your account:</p>
+        
+        <pre><code>{"token": "{{.activationToken}}"}</code></pre>
+        
+        <p><strong>Note:</strong> This is a one-time use token and it will expire in 3 days.</p>
+        
+        <p>If you have any questions or need assistance, please contact your system administrator.</p>
+        
+        <p>Best regards,<br>
+        <strong>Police Training System Administration</strong></p>
+    </div>
+</body>
+
+</html>
+{{end}}
