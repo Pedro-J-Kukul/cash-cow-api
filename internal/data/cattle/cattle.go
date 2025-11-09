@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/errors"
+	"github.com/Pedro-J-Kukul/cash-cow-api/internal/data/errors"
 	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/filters"
 )
 

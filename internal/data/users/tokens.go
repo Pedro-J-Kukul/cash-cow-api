@@ -9,7 +9,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	internalErrors "github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/errors"
+	internalErrors "github.com/Pedro-J-Kukul/cash-cow-api/internal/data/errors"
 	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/validator"
 )
 

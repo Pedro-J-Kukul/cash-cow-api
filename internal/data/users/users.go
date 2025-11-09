@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	internalErrors "github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/errors"
+	internalErrors "github.com/Pedro-J-Kukul/cash-cow-api/internal/data/errors"
 	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/filters"
 	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/validator"
 	"golang.org/x/crypto/bcrypt"
