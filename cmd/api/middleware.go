@@ -2,16 +2,13 @@
 package main
 
 import (
-	"errors"
 	"expvar"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/Pedro-J-Kukul/cash-cow-api/internal/shared/validator"
 	"golang.org/x/time/rate"
 )
 
@@ -116,114 +113,114 @@ func (app *App) enableCORS(next http.Handler) http.Handler {
 	})
 }
 
-/***********************************************************************************************
- * Authentication and Authorization
- ************************************************************************************************/
+// /***********************************************************************************************
+//  * Authentication and Authorization
+//  ************************************************************************************************/
 
-// authenticate is a middleware that checks for a valid authentication token in the request.
-func (app *App) authenticate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Authorization") // Indicate that the response varies based on the Authorization header
+// // authenticate is a middleware that checks for a valid authentication token in the request.
+// func (app *App) authenticate(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		w.Header().Add("Vary", "Authorization") // Indicate that the response varies based on the Authorization header
 
-		authorizationHeader := r.Header.Get("Authorization") // Get the Authorization header
+// 		authorizationHeader := r.Header.Get("Authorization") // Get the Authorization header
 
-		// If the Authorization header is empty, set the user in the context to anonymous and call the next handler
-		if authorizationHeader == "" {
-			r = app.contextSetUser(r, data.AnonymousUser) // Set the user in the context to anonymous
-			next.ServeHTTP(w, r)                          // Call the next handler in the chain
-			return                                        // Return to avoid further processing
-		}
+// 		// If the Authorization header is empty, set the user in the context to anonymous and call the next handler
+// 		if authorizationHeader == "" {
+// 			r = app.contextSetUser(r, data.AnonymousUser) // Set the user in the context to anonymous
+// 			next.ServeHTTP(w, r)                          // Call the next handler in the chain
+// 			return                                        // Return to avoid further processing
+// 		}
 
-		// Split the Authorization header into parts
-		headerParts := strings.Split(authorizationHeader, " ")   // Split the header by spaces
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" { // Check if the header is in the correct format
-			app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response
-			return                                       // Return to avoid further processing
-		}
+// 		// Split the Authorization header into parts
+// 		headerParts := strings.Split(authorizationHeader, " ")   // Split the header by spaces
+// 		if len(headerParts) != 2 || headerParts[0] != "Bearer" { // Check if the header is in the correct format
+// 			app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response
+// 			return                                       // Return to avoid further processing
+// 		}
 
-		tokenPlaintext := headerParts[1] // Get the token part of the header
+// 		tokenPlaintext := headerParts[1] // Get the token part of the header
 
-		// Validate the token plaintext
-		v := validator.New()                                            // Create a new validator instance
-		if data.ValidateTokenPlaintext(v, tokenPlaintext); !v.Valid() { // Validate the token format
-			app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response
-			return                                       // Return to avoid further processing
-		}
+// 		// Validate the token plaintext
+// 		v := validator.New()                                            // Create a new validator instance
+// 		if data.ValidateTokenPlaintext(v, tokenPlaintext); !v.Valid() { // Validate the token format
+// 			app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response
+// 			return                                       // Return to avoid further processing
+// 		}
 
-		// Get the user associated with the token
-		user, err := app.models.User.GetForToken(data.ScopeAuthentication, tokenPlaintext) // Get the user for the token
-		if err != nil {
-			switch {
-			case errors.Is(err, data.ErrRecordNotFound):
-				app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response if the token is not found
-			default:
-				app.serverErrorResponse(w, r, err) // Send a 500 Internal Server Error response for other errors
-			}
-			return // Return to avoid further processing
-		}
+// 		// Get the user associated with the token
+// 		user, err := app.models.User.GetForToken(data.ScopeAuthentication, tokenPlaintext) // Get the user for the token
+// 		if err != nil {
+// 			switch {
+// 			case errors.Is(err, data.ErrRecordNotFound):
+// 				app.invalidAuthenticationTokenResponse(w, r) // Send a 401 Unauthorized response if the token is not found
+// 			default:
+// 				app.serverErrorResponse(w, r, err) // Send a 500 Internal Server Error response for other errors
+// 			}
+// 			return // Return to avoid further processing
+// 		}
 
-		// Set the user in the request context
-		r = app.contextSetUser(r, user) // Set the authenticated user in the context
+// 		// Set the user in the request context
+// 		r = app.contextSetUser(r, user) // Set the authenticated user in the context
 
-		next.ServeHTTP(w, r) // Call the next handler in the chain
-	})
-}
+// 		next.ServeHTTP(w, r) // Call the next handler in the chain
+// 	})
+// }
 
-// requireAuthenticatedUser is a middleware that ensures the user is authenticated.
-func (app *App) requireAuthenticatedUser(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := app.contextGetUser(r) // Get the user from the context
+// // requireAuthenticatedUser is a middleware that ensures the user is authenticated.
+// func (app *App) requireAuthenticatedUser(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		user := app.contextGetUser(r) // Get the user from the context
 
-		if user.IsAnonymous() { // Check if the user is anonymous
-			app.authenticationRequiredResponse(w, r) // Send a 401 Unauthorized response
-			return                                   // Return to avoid further processing
-		}
+// 		if user.IsAnonymous() { // Check if the user is anonymous
+// 			app.authenticationRequiredResponse(w, r) // Send a 401 Unauthorized response
+// 			return                                   // Return to avoid further processing
+// 		}
 
-		next.ServeHTTP(w, r) // Call the next handler in the chain
-	})
-}
+// 		next.ServeHTTP(w, r) // Call the next handler in the chain
+// 	})
+// }
 
-// requireActivatedUser is a middleware that ensures the user is activated.
-func (app *App) requireActivatedUser(next http.Handler) http.Handler {
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := app.contextGetUser(r) // Get the user from the context
+// // requireActivatedUser is a middleware that ensures the user is activated.
+// func (app *App) requireActivatedUser(next http.Handler) http.Handler {
+// 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		user := app.contextGetUser(r) // Get the user from the context
 
-		if !user.IsActivated { // Check if the user is not activated
-			app.inactiveAccountResponse(w, r) // Send a 403 Forbidden response
-			return                            // Return to avoid further processing
-		}
+// 		if !user.IsActivated { // Check if the user is not activated
+// 			app.inactiveAccountResponse(w, r) // Send a 403 Forbidden response
+// 			return                            // Return to avoid further processing
+// 		}
 
-		next.ServeHTTP(w, r) // Call the next handler in the chain
-	})
-	return app.requireAuthenticatedUser(fn)
-}
+// 		next.ServeHTTP(w, r) // Call the next handler in the chain
+// 	})
+// 	return app.requireAuthenticatedUser(fn)
+// }
 
-/************************************************************************************************************/
-// Permissions
-/************************************************************************************************************/
-// requireRole is a middleware that ensures the user has a specific role.
-func (app *App) requirePermissions(requiredPermissions string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user := app.contextGetUser(r) // Get the user from the context
+// /************************************************************************************************************/
+// // Permissions
+// /************************************************************************************************************/
+// // requireRole is a middleware that ensures the user has a specific role.
+// func (app *App) requirePermissions(requiredPermissions string) func(http.Handler) http.Handler {
+// 	return func(next http.Handler) http.Handler {
+// 		fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			user := app.contextGetUser(r) // Get the user from the context
 
-			// Check if the user has the required permission
-			hasPermissions, err := app.models.Role.HasPermission(user.ID, requiredPermissions)
-			if err != nil {
-				app.serverErrorResponse(w, r, err) // Send a 500 Internal Server Error response for errors
-				return
-			}
+// 			// Check if the user has the required permission
+// 			hasPermissions, err := app.models.Role.HasPermission(user.ID, requiredPermissions)
+// 			if err != nil {
+// 				app.serverErrorResponse(w, r, err) // Send a 500 Internal Server Error response for errors
+// 				return
+// 			}
 
-			if !hasPermissions {
-				app.notPermittedResponse(w, r) // Send a 403 Forbidden response if not permitted
-				return
-			}
+// 			if !hasPermissions {
+// 				app.notPermittedResponse(w, r) // Send a 403 Forbidden response if not permitted
+// 				return
+// 			}
 
-			next.ServeHTTP(w, r) // Call the next handler in the chain
-		})
-		return app.requireActivatedUser(fn) // Ensure the user is activated before checking permissions
-	}
-}
+// 			next.ServeHTTP(w, r) // Call the next handler in the chain
+// 		})
+// 		return app.requireActivatedUser(fn) // Ensure the user is activated before checking permissions
+// 	}
+// }
 
 /************************************************************************************************************/
 //  Metrics
