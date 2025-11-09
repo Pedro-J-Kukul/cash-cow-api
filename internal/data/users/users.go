@@ -18,7 +18,7 @@ import (
  * User declarations
  ************************************************************************************************************/
 
-// Password stores the hashed password and optional plaintext (used for validation during write operations).
+// Password stores the password hash and kept plaintext for validation during writes.
 type Password struct {
 	hash      []byte
 	plaintext *string
@@ -32,11 +32,10 @@ type User struct {
 	PhoneNumber string    `json:"phone_number"`
 	FirstName   string    `json:"first_name"`
 	LastName    string    `json:"last_name"`
-	MiddleName  string    `json:"middle_name"`
 	Password    Password  `json:"-"`
-	IsActivated bool      `json:"is_activated"`
-	IsDeleted   bool      `json:"is_deleted"`
-	IsVerified  bool      `json:"is_verified"`
+	IsActivated *bool     `json:"is_activated"`
+	IsDeleted   *bool     `json:"is_deleted"`
+	IsVerified  *bool     `json:"is_verified"`
 	Version     int       `json:"version"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -44,6 +43,18 @@ type User struct {
 
 // AnonymousUser is a sentinel anonymous user instance.
 var AnonymousUser = &User{}
+
+// User Filters struct for filtering user queries
+type UserFilters struct {
+	FarmerID    string
+	Email       string
+	PhoneNumber string
+	Name        string
+	IsActivated *bool
+	IsDeleted   *bool
+	IsVerified  *bool
+	Filters     filters.Filters
+}
 
 // UserModels struct for database operations
 type UserModel struct {
@@ -75,21 +86,6 @@ func (p *Password) Matches(plaintext string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-type UserRepository interface {
-	Insert(user *User) error
-
-	Update(user *User) error
-	UpdatePassword(user *User) error
-
-	DeleteSoft(user *User) error
-	DeleteHard(userID int64) error
-
-	GetByID(userID int64) (*User, error)
-	GetByEmail(email string) (*User, error)
-	GetByFarmerID(farmerID string) (*User, error)
-	GetAll(u UserFilters) ([]*User, filters.MetaData, error)
 }
 
 /************************************************************************************************************
@@ -125,7 +121,6 @@ func ValidateUser(v *validator.Validator, user *User) {
 	v.Check(len(user.FirstName) <= 50, "first_name", "must not be more than 50 characters long")
 	v.Check(user.LastName != "", "last_name", "must be provided")
 	v.Check(len(user.LastName) <= 50, "last_name", "must not be more than 50 characters long")
-	v.Check(len(user.MiddleName) <= 50, "middle_name", "must not be more than 50 characters long")
 	v.Check(len(user.FarmerID) <= 50, "farmer_id", "must not be more than 50 characters long")
 	v.Check(len(user.PhoneNumber) <= 15, "phone_number", "must not be more than 15 characters long")
 	validateEmail(v, user.Email)
@@ -138,28 +133,14 @@ func ValidateUser(v *validator.Validator, user *User) {
 }
 
 /************************************************************************************************************
- * Filters
- ************************************************************************************************************/
-type UserFilters struct {
-	FarmerID    string
-	Email       string
-	PhoneNumber string
-	Name        string
-	IsActivated *bool // nil = don't filter, otherwise filter by value
-	IsDeleted   *bool // nil = don't filter, otherwise filter by value
-	IsVerified  *bool // nil = don't filter, otherwise filter by value
-	Filters     filters.Filters
-}
-
-/************************************************************************************************************
  * Database Operations
  ************************************************************************************************************/
 
 func (m *UserModel) Insert(user *User) error {
 	// Query
 	query := `
-		INSERT INTO users (farmer_id, email, first_name, last_name, middle_name, password_hash, is_activated, is_deleted, is_verified, phone_number)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO users (farmer_id, email, first_name, last_name, password_hash, is_activated, is_deleted, is_verified, phone_number)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at, version`
 
 	// Arguments for Query
@@ -168,7 +149,6 @@ func (m *UserModel) Insert(user *User) error {
 		user.Email,
 		user.FirstName,
 		user.LastName,
-		user.MiddleName,
 		user.Password.hash,
 		user.IsActivated,
 		user.IsDeleted,
@@ -207,8 +187,8 @@ func (m *UserModel) Update(user *User) error {
 	// Query
 	query := `
 		UPDATE users
-		SET farmer_id = $1, email = $2, phone_number = $3, first_name = $4, last_name = $5, middle_name = $6, password_hash = $7, is_activated = $8, is_deleted = $9, is_verified = $10, updated_at = now(), version = version + 1
-		WHERE id = $11 AND version = $12
+		SET farmer_id = $1, email = $2, phone_number = $3, first_name = $4, last_name = $5, password_hash = $6, is_activated = $7, is_deleted = $8, is_verified = $9, updated_at = now(), version = version + 1
+		WHERE id = $10 AND version = $11
 		RETURNING updated_at, version  `
 
 	// Arguments for Query
@@ -218,7 +198,6 @@ func (m *UserModel) Update(user *User) error {
 		user.PhoneNumber,
 		user.FirstName,
 		user.LastName,
-		user.MiddleName,
 		user.Password.hash,
 		user.IsActivated,
 		user.IsDeleted,
@@ -355,7 +334,7 @@ func (m *UserModel) DeleteHard(userID int64) error {
 func (m *UserModel) GetByID(userID int64) (*User, error) {
 	// Query
 	query := `
-		SELECT id, farmer_id, email, phone_number, first_name, last_name, middle_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
+		SELECT id, farmer_id, email, phone_number, first_name, last_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
 		FROM users
 		WHERE id = $1`
 
@@ -373,7 +352,6 @@ func (m *UserModel) GetByID(userID int64) (*User, error) {
 		&user.PhoneNumber,
 		&user.FirstName,
 		&user.LastName,
-		&user.MiddleName,
 		&user.Password.hash,
 		&user.IsActivated,
 		&user.IsDeleted,
@@ -400,7 +378,7 @@ func (m *UserModel) GetByID(userID int64) (*User, error) {
 func (m *UserModel) GetByEmail(email string) (*User, error) {
 	// Query
 	query := `
-		SELECT id, farmer_id, email, phone_number, first_name, last_name, middle_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
+		SELECT id, farmer_id, email, phone_number, first_name, last_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
 		FROM users
 		WHERE email = $1`
 
@@ -418,7 +396,6 @@ func (m *UserModel) GetByEmail(email string) (*User, error) {
 		&user.PhoneNumber,
 		&user.FirstName,
 		&user.LastName,
-		&user.MiddleName,
 		&user.Password.hash,
 		&user.IsActivated,
 		&user.IsDeleted,
@@ -445,7 +422,7 @@ func (m *UserModel) GetByEmail(email string) (*User, error) {
 func (m *UserModel) GetByFarmerID(farmerID string) (*User, error) {
 	// Query
 	query := `
-		SELECT id, farmer_id, email, phone_number, first_name, last_name, middle_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
+		SELECT id, farmer_id, email, phone_number, first_name, last_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
 		FROM users
 		WHERE farmer_id = $1`
 
@@ -463,7 +440,6 @@ func (m *UserModel) GetByFarmerID(farmerID string) (*User, error) {
 		&user.PhoneNumber,
 		&user.FirstName,
 		&user.LastName,
-		&user.MiddleName,
 		&user.Password.hash,
 		&user.IsActivated,
 		&user.IsDeleted,
@@ -487,15 +463,15 @@ func (m *UserModel) GetByFarmerID(farmerID string) (*User, error) {
 }
 
 // GetAll Method
-func (m *UserModel) GetAll(u UserFilters) ([]*User, filters.MetaData, error) {
+func (m *UserModel) GetAll(u *UserFilters) ([]*User, filters.MetaData, error) {
 	// Base Query
 	query := fmt.Sprintf(`
-		SELECT COUNT(*) OVER(), id, farmer_id, email, phone_number, first_name, last_name, middle_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
+		SELECT COUNT(*) OVER(), id, farmer_id, email, phone_number, first_name, last_name, password_hash, is_activated, is_deleted, is_verified, version, created_at, updated_at
 		FROM users
-		WHERE (to_tsvector('simple', farmer_id) @@ plainto_tsquery('simple', $1) OR $1 = '')
-        AND (to_tsvector('simple', first_name || ' ' || last_name || ' ' || coalesce(middle_name, '')) @@ plainto_tsquery('simple', $2) OR $2 = '')
+		WHER E (to_tsvector('simple', farmer_id) @@ plainto_tsquery('simple', $1) OR $1 = '')
+        AND (to_tsvector('simple', first_name || ' ' || last_name || ' ') @@ plainto_tsquery('simple', $2) OR $2 = '')
         AND (to_tsvector('simple', email) @@ plainto_tsquery('simple', $3) OR $3 = '')
-		ANDD (to_tsvector('simple', phone_number) @@ plainto_tsquery('simple', $4) OR $4 = '')
+		AND (to_tsvector('simple', phone_number) @@ plainto_tsquery('simple', $4) OR $4 = '')
         AND ($4::boolean IS NULL OR is_deleted = $4)
         AND ($5::boolean IS NULL OR is_activated = $5)
         AND ($6::boolean IS NULL OR is_verified = $6)
@@ -536,7 +512,6 @@ func (m *UserModel) GetAll(u UserFilters) ([]*User, filters.MetaData, error) {
 			&user.PhoneNumber,
 			&user.FirstName,
 			&user.LastName,
-			&user.MiddleName,
 			&user.Password.hash,
 			&user.IsActivated,
 			&user.IsDeleted,

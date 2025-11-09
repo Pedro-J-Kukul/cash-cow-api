@@ -1,3 +1,4 @@
+// File: internal/data/cattle/breeds.go
 package cattle
 
 import (
@@ -54,7 +55,6 @@ func (m *BreedModel) Insert(b *Breed) error {
 		INSERT INTO cattle_breeds (name, description, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, NOW(), NOW())
 		RETURNING id, created_at, updated_at`
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -67,7 +67,6 @@ func (m *BreedModel) Insert(b *Breed) error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -78,10 +77,11 @@ func (m *BreedModel) Update(b *Breed) error {
 		SET name = $1, description = $2, is_active = $3, updated_at = NOW()
 		WHERE id = $4
 		RETURNING updated_at`
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	if err := m.DB.QueryRowContext(ctx, query, b.Name, b.Description, b.IsActive, b.ID).Scan(&b.UpdatedAt); err != nil {
+
+	err := m.DB.QueryRowContext(ctx, query, b.Name, b.Description, b.IsActive, b.ID).Scan(&b.UpdatedAt)
+	if err != nil {
 		switch {
 		case errors.IsUniqueViolation(err, "cattle_breeds_name_key"):
 			return errors.ErrDuplicateValue("name")
@@ -91,7 +91,6 @@ func (m *BreedModel) Update(b *Breed) error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -101,7 +100,6 @@ func (m *BreedModel) Delete(id int) error {
 		DELETE FROM cattle_breeds
 		WHERE id = $1
 	`
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -114,7 +112,6 @@ func (m *BreedModel) Delete(id int) error {
 			return err
 		}
 	}
-
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
@@ -122,7 +119,6 @@ func (m *BreedModel) Delete(id int) error {
 	if rowsAffected == 0 {
 		return errors.ErrRecordNotFound
 	}
-
 	return nil
 }
 
@@ -142,7 +138,6 @@ func (m *BreedModel) GetByID(id int) (*Breed, error) {
 		&b.CreatedAt,
 		&b.UpdatedAt,
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -157,14 +152,13 @@ func (m *BreedModel) GetByID(id int) (*Breed, error) {
 			return nil, err
 		}
 	}
-
 	return &b, nil
 }
 
 // GetAll retrieves all cattle breeds from the database.
 func (m *BreedModel) GetAll(filter *BreedFilter) (Breeds, filters.MetaData, error) {
 	query := fmt.Sprintf(`
-		SELECT id, name, description, is_active, created_at, updated_at
+		SELECT COUNT(*) OVER(), id, name, description, is_active, created_at, updated_at
 		FROM cattle_breeds
 		WHERE ($1 = '' OR LOWER(name) LIKE LOWER('%%' || $1 || '%%'))
 		AND ($2::boolean IS NULL OR is_active = $2)
@@ -177,7 +171,6 @@ func (m *BreedModel) GetAll(filter *BreedFilter) (Breeds, filters.MetaData, erro
 		filter.Default.Limit(),
 		filter.Default.Offset(),
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -185,15 +178,15 @@ func (m *BreedModel) GetAll(filter *BreedFilter) (Breeds, filters.MetaData, erro
 	if err != nil {
 		return nil, filters.EmptyMetaData, err
 	}
-
 	defer rows.Close()
 
 	totalRecords := 0
 	breeds := Breeds{}
-
 	for rows.Next() {
+		var count int
 		var b Breed
 		scan := []any{
+			&count,
 			&b.ID,
 			&b.Name,
 			&b.Description,
@@ -201,11 +194,11 @@ func (m *BreedModel) GetAll(filter *BreedFilter) (Breeds, filters.MetaData, erro
 			&b.CreatedAt,
 			&b.UpdatedAt,
 		}
-
 		err := rows.Scan(scan...)
 		if err != nil {
 			return nil, filters.EmptyMetaData, err
 		}
+		totalRecords = count
 		breeds = append(breeds, b)
 	}
 	if err = rows.Err(); err != nil {
@@ -213,6 +206,5 @@ func (m *BreedModel) GetAll(filter *BreedFilter) (Breeds, filters.MetaData, erro
 	}
 
 	metaData := filters.CalculateMetaData(totalRecords, filter.Default.Page, filter.Default.PageSize)
-
 	return breeds, metaData, nil
 }
