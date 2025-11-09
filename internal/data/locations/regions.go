@@ -39,12 +39,11 @@ type RegionFilter struct {
 }
 
 // ValidateRegion validates the fields of a Region.
-func ValidateRegion(v *validator.Validator, r *Region) error {
+func ValidateRegion(v *validator.Validator, r *Region) {
 	v.Check(r.Name != "", "name", "must be provided")
 	v.Check(len(r.Name) <= 255, "name", "must not be more than 255 bytes long")
 	v.Check(r.Code != "", "code", "must be provided")
 	v.Check(len(r.Code) <= 10, "code", "must not be more than 10 bytes long")
-	return nil
 }
 
 /****************************************************************************************
@@ -66,9 +65,9 @@ func (m *RegionModel) Insert(r Region) error {
 	if err != nil {
 		switch {
 		case errors.IsUniqueViolation(err, "code"):
-			return errors.ErrDuplicateCode
+			return errors.ErrDuplicateValue("code")
 		case errors.IsUniqueViolation(err, "name"):
-			return errors.ErrDuplicateName
+			return errors.ErrDuplicateValue("name")
 		case errors.IsForeignKeyViolation(err):
 			return errors.ErrForeignKeyViolation
 		default:

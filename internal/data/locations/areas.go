@@ -69,13 +69,12 @@ func ValidateCoordinates(v *validator.Validator, c Coordinates) {
 }
 
 // ValidateArea validates the fields of an Area.
-func ValidateArea(v *validator.Validator, a *Area) error {
+func ValidateArea(v *validator.Validator, a *Area) {
 	v.Check(a.Name != "", "name", "must be provided")
 	v.Check(len(a.Name) <= 255, "name", "must not be more than 255 bytes long")
 	v.Check(a.DistrictID > 0, "district_id", "must be provided and greater than zero")
 	v.Check(a.AreaType == AreaTypeCity || a.AreaType == AreaTypeTown || a.AreaType == AreaTypeVillage, "area_type", "must be a valid area type")
 	ValidateCoordinates(v, a.Coordinates)
-	return nil
 }
 
 /****************************************************************************************
@@ -98,7 +97,7 @@ func (m *AreaModel) Insert(a Area) error {
 	if err != nil {
 		switch {
 		case errors.IsUniqueViolation(err, "areas_name_key"):
-			return errors.ErrDuplicateName
+			return errors.ErrDuplicateValue("name")
 		case errors.IsForeignKeyViolation(err):
 			return errors.ErrInvalidDistrictID
 		default:
@@ -228,11 +227,11 @@ func (m *AreaModel) GetAll(filter *AreaFilter) (Areas, filters.MetaData, error) 
 
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, filters.MetaData{}, err
+		return nil, filters.EmptyMetaData, err
 	}
 	defer rows.Close()
 
-	var totalRecords int
+	totalRecords := 0
 	areas := Areas{}
 
 	for rows.Next() {
