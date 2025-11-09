@@ -12,6 +12,10 @@ type HealthResponse struct {
 	Message  string `json:"message"`
 }
 
+type App struct {
+	DB *sql.DB
+}
+
 func main() {
 
 	// Database connection
