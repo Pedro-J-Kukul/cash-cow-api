@@ -21,7 +21,7 @@ func (a *App) contextSetUser(r *http.Request, user *data.User) *http.Request {
 }
 
 // contextGetUser retrieves the authenticated user from the request context.
-func contextGetUser(r *http.Request) *data.User {
+func (a *App) contextGetUser(r *http.Request) *data.User {
 	user, ok := r.Context().Value(userContextKey).(*data.User)
 	if !ok {
 		panic("missing user value in context")

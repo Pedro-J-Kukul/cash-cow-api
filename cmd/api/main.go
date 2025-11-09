@@ -41,16 +41,15 @@ type serverConfig struct {
 	}
 }
 
-func main() {
-	// For application setup
-	type App struct {
-		config serverConfig   // application configuration settings
-		logger *slog.Logger   // logger for structured logging
-		wg     sync.WaitGroup // wait group for managing goroutines
-		// models data.Models
-		// mailer *mailer.Mailer
-	}
+type App struct {
+	config serverConfig   // application configuration settings
+	logger *slog.Logger   // logger for structured logging
+	wg     sync.WaitGroup // wait group for managing goroutines
+	// models data.Models
+	// mailer *mailer.Mailer
+}
 
+func main() {
 	cfg := loadConfig()            // load the application configuration
 	logger := setUpLogger(cfg.env) // set up the logger
 	db, err := openDB(cfg)         // open the database connection
@@ -62,7 +61,7 @@ func main() {
 	logger.Info("database connection pool established") // log successful database connection
 
 	// For metrics
-	expvar.NewString("version").Set(AppVersion) // publish the application version
+	expvar.NewString("version").Set("1") // publish the application version
 	expvar.Publish("goroutines", expvar.Func(func() interface{} {
 		return runtime.NumGoroutine() // publish the number of active goroutines
 	}))
