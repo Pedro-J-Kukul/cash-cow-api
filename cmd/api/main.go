@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Pedro-J-Kukul/cash-cow-api/internal/mailer"
 )
 
 type serverConfig struct {
@@ -46,7 +48,7 @@ type App struct {
 	logger *slog.Logger   // logger for structured logging
 	wg     sync.WaitGroup // wait group for managing goroutines
 	// models data.Models
-	// mailer *mailer.Mailer
+	mailer *mailer.Mailer
 }
 
 func main() {
