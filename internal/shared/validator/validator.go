@@ -19,6 +19,8 @@ func New() *Validator {
 
 // emailRX is a regular expression for validating email addresses
 var EmailRX = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+var LatitudeRX = regexp.MustCompile(`^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?)$`)
+var LongitudeRX = regexp.MustCompile(`^[-+]?((1[0-7]\d)|([1-9]?\d))(\.\d+)?|180(\.0+)?$`)
 
 // Password complexity regular expressions
 var (

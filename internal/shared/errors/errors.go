@@ -23,9 +23,13 @@ var (
 	ErrPermissionDenied    = errors.New("permission denied for update")
 	ErrStaleData           = errors.New("stale data: record has been modified elsewhere")
 	ErrLockedResource      = errors.New("resource is locked, cannot update")
-	ErrInsertFailed        = errors.New("insert failed: ")
+	ErrInsertFailed        = errors.New("insert failed")
 	ErrUpdateFailed        = errors.New("update failed: ")
 	ErrDeleteFailed        = errors.New("delete failed: ")
+
+	ErrDuplicateCode     = errors.New("duplicate value for column: code")
+	ErrDuplicateName     = errors.New("duplicate value for column: name")
+	ErrInvalidDistrictID = errors.New("invalid district ID")
 )
 
 // isUniqueViolation checks where the error is a unique constraint violation
@@ -88,4 +92,8 @@ func IsRecordNotFound(err error) bool {
 
 func ValidationFailed(details map[string]string) error {
 	return fmt.Errorf("validation failed: %v", details)
+}
+
+func ErrNoRows(err error) bool {
+	return errors.Is(err, sql.ErrNoRows)
 }
