@@ -1,5 +1,5 @@
 // File: internal/data/domain/users/models.go
-package data
+package users
 
 import (
 	"context"

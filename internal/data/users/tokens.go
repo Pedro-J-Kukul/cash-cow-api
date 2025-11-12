@@ -1,5 +1,5 @@
 // file: internal/data/tokens.go
-package data
+package users
 
 import (
 	"context"

@@ -1,7 +1,8 @@
-package data
+package users
 
 import (
 	"context"
+	"database/sql"
 	"slices"
 	"time"
 
@@ -29,9 +30,9 @@ type UserPermission struct {
 // Array of permissions
 type Permissions []string
 
-/************************************************************************************************************
- * Permission helpers
- ************************************************************************************************************/
+type PermissionModel struct {
+	DB *sql.DB
+}
 
 // Helper to check if string is included in the list of permissions.
 func (p Permissions) Includes(code string) bool {
